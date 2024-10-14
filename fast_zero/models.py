@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column, registry
@@ -15,8 +15,8 @@ class User:
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(
-        init=False, server_default=func.now()
+        init=False, default=datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        init=False, onupdate=func.now()
+        init=False, default=datetime.now(timezone.utc), onupdate=func.now()
     )
