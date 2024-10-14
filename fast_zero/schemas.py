@@ -22,4 +22,4 @@ class UserDB(UserPublicSchema):
 
 
 class UserList(BaseModel):
-    users: list[UserPublicSchema]
+    users: list[UserDB]
