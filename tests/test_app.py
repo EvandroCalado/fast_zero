@@ -93,9 +93,12 @@ def test_users_read_user_should_return_NOT_FOUND_if_id_is_invalid(
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_users_update_user_should_return_OK_and_updated_user(client, user):
+def test_users_update_user_should_return_OK_and_updated_user(
+    client, user, token
+):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'updated_johndoe',
             'email': 'johndoe@me.com',
@@ -111,11 +114,12 @@ def test_users_update_user_should_return_OK_and_updated_user(client, user):
     }
 
 
-def test_users_update_user_should_return_NOT_FOUND_if_id_is_invalid(
-    client, user
+def test_users_update_user_should_return_UNAUTHORIZED_if_id_is_invalid(
+    client, user, token
 ):
     response = client.put(
         '/users/3',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'updated_johndoe',
             'email': 'johndoe@me.com',
@@ -123,11 +127,11 @@ def test_users_update_user_should_return_NOT_FOUND_if_id_is_invalid(
         },
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
-def test_users_update_user_should_return_CONFLICT_if_id_already_exists(
-    client, user
+def test_users_update_user_should_return_CONFLICT_if_username_already_exists(
+    client, token
 ):
     client.post(
         '/users',
@@ -139,7 +143,8 @@ def test_users_update_user_should_return_CONFLICT_if_id_already_exists(
     )
 
     response = client.put(
-        f'/users/{user.id}',
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
             'email': 'test_user@me.com',
@@ -152,7 +157,7 @@ def test_users_update_user_should_return_CONFLICT_if_id_already_exists(
 
 
 def test_users_update_user_should_return_CONFLICT_if_email_already_exists(
-    client, user
+    client, user, token
 ):
     client.post(
         '/users',
@@ -164,10 +169,11 @@ def test_users_update_user_should_return_CONFLICT_if_email_already_exists(
     )
 
     response = client.put(
-        f'/users/{user.id}',
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'test',
-            'email': 'fausto@example.com',
+            'username': 'fausto',
+            'email': 'test_user@me.com',
             'password': 'password',
         },
     )
@@ -176,16 +182,66 @@ def test_users_update_user_should_return_CONFLICT_if_email_already_exists(
     assert response.json() == {'detail': 'Username or Email already exists'}
 
 
-def test_users_delete_user_should_return_OK_and_user_deleted(client, user):
-    response = client.delete('/users/1')
+def test_users_delete_user_should_return_OK_and_user_deleted(
+    client, user, token
+):
+    response = client.delete(
+        '/users/1', headers={'Authorization': f'Bearer {token}'}
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_users_delete_user_should_return_NOT_FOUND_if_id_is_invalid(
+def test_users_delete_user_should_return_NUNAUTHORIZED_if_id_is_invalid(
+    client, user, token
+):
+    response = client.delete(
+        '/users/3',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+
+
+def test_auth_login_should_return_OK_and_token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': user.clean_password,
+        },
+    )
+    token = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert token['token_type'] == 'Bearer'
+    assert 'access_token' in token
+
+
+def test_auth_login_should_return_NOT_FOUND_if_username_not_found(
     client, user
 ):
-    response = client.delete('/users/3')
+    response = client.post(
+        '/token',
+        data={
+            'username': 'invalid_user',
+            'password': user.password,
+        },
+    )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_auth_login_should_return_UNAUTHORIZED_if_password_not_valid(
+    client, user
+):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.email,
+            'password': 'invalid_password',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
