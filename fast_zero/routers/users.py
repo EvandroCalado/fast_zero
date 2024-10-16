@@ -104,8 +104,8 @@ def update_user(
 ):
     if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='You are not authorized to update this user',
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
         )
 
     try:
@@ -135,8 +135,8 @@ def delete_user(
 ):
     if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='You are not authorized to update this user',
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
         )
 
     session.delete(current_user)

@@ -5,7 +5,7 @@ from fast_zero.schemas import UserPublicSchema
 
 def test_create_user_should_return_CREATED_and_user_with_id(client):
     response = client.post(
-        '/users/',
+        '/users',
         json={
             'username': 'johndoe',
             'email': 'johndoe@me.com',
@@ -25,9 +25,9 @@ def test_create_user_should_return_BAD_REQUEST_if_username_exists(
     client, user
 ):
     response = client.post(
-        '/users/',
+        '/users',
         json={
-            'username': 'test_user',
+            'username': user.username,
             'email': 'test_user@me.com',
             'password': 'password',
         },
@@ -38,10 +38,10 @@ def test_create_user_should_return_BAD_REQUEST_if_username_exists(
 
 def test_create_user_should_return_BAD_REQUEST_if_email_exists(client, user):
     response = client.post(
-        '/users/',
+        '/users',
         json={
             'username': 'new_test_user',
-            'email': 'test_user@me.com',
+            'email': user.email,
             'password': 'password',
         },
     )
@@ -50,7 +50,7 @@ def test_create_user_should_return_BAD_REQUEST_if_email_exists(client, user):
 
 
 def test_read_users_should_return_OK_and_empty_list(client):
-    response = client.get('/users/')
+    response = client.get('/users')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': []}
@@ -59,24 +59,24 @@ def test_read_users_should_return_OK_and_empty_list(client):
 def test_read_users_should_return_OK_and_users_list(client, user):
     user_schema = UserPublicSchema.model_validate(user).model_dump()
 
-    response = client.get('/users/')
+    response = client.get('/users')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': [user_schema]}
 
 
 def test_read_user_should_return_OK_and_user(client, user):
-    response = client.get('/users/1')
+    response = client.get(f'/users/{user.id}')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
-        'username': 'test_user',
-        'email': 'test_user@me.com',
+        'username': user.username,
+        'email': user.email,
     }
 
 
-def test_read_user_should_return_NOT_FOUND_if_id_is_invalid(client, user):
+def test_read_user_should_return_NOT_FOUND_if_id_is_invalid(client):
     response = client.get('/users/3')
 
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -101,11 +101,11 @@ def test_update_user_should_return_OK_and_updated_user(client, user, token):
     }
 
 
-def test_update_user_should_return_UNAUTHORIZED_if_id_is_invalid(
-    client, user, token
+def test_update_user_should_return_FORBIDDEN_if_id_is_invalid(
+    client, other_user, token
 ):
     response = client.put(
-        '/users/3',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'updated_johndoe',
@@ -114,26 +114,18 @@ def test_update_user_should_return_UNAUTHORIZED_if_id_is_invalid(
         },
     )
 
-    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}
 
 
 def test_update_user_should_return_CONFLICT_if_username_already_exists(
-    client, token
+    client, user, other_user, token
 ):
-    client.post(
-        '/users',
-        json={
-            'username': 'fausto',
-            'email': 'fausto@example.com',
-            'password': 'secret',
-        },
-    )
-
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'fausto',
+            'username': other_user.username,
             'email': 'test_user@me.com',
             'password': 'password',
         },
@@ -144,23 +136,14 @@ def test_update_user_should_return_CONFLICT_if_username_already_exists(
 
 
 def test_update_user_should_return_CONFLICT_if_email_already_exists(
-    client, user, token
+    client, user, other_user, token
 ):
-    client.post(
-        '/users',
-        json={
-            'username': 'fausto',
-            'email': 'fausto@example.com',
-            'password': 'secret',
-        },
-    )
-
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'fausto',
-            'email': 'test_user@me.com',
+            'username': 'new_user_name',
+            'email': other_user.email,
             'password': 'password',
         },
     )
@@ -171,19 +154,20 @@ def test_update_user_should_return_CONFLICT_if_email_already_exists(
 
 def test_delete_user_should_return_OK_and_user_deleted(client, user, token):
     response = client.delete(
-        '/users/1', headers={'Authorization': f'Bearer {token}'}
+        f'/users/{user.id}', headers={'Authorization': f'Bearer {token}'}
     )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_should_return_NUNAUTHORIZED_if_id_is_invalid(
-    client, user, token
+def test_delete_user_should_return_FORBIDDEN_if_id_is_invalid(
+    client, other_user, token
 ):
     response = client.delete(
-        '/users/3',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
 
-    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}

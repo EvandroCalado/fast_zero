@@ -13,6 +13,7 @@ from fast_zero.schemas import (
 )
 from fast_zero.security import (
     create_access_token,
+    get_current_user,
     verify_password,
 )
 
@@ -48,3 +49,10 @@ def login_from_access_token(
     access_token = create_access_token(data={'sub': db_user.email})
 
     return {'access_token': access_token, 'token_type': 'Bearer'}
+
+
+@router.post('/refresh_token', response_model=TokenSchema)
+def refresh_token(User: User = Depends(get_current_user)):
+    mew_access_token = create_access_token(data={'sub': User.email})
+
+    return {'access_token': mew_access_token, 'token_type': 'Bearer'}
