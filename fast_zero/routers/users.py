@@ -73,7 +73,6 @@ def read_users(
 
 @router.get(
     '/{user_id}',
-    status_code=HTTPStatus.OK,
     response_model=UserPublicSchema,
 )
 def read_user_by_id(
@@ -93,7 +92,6 @@ def read_user_by_id(
 
 @router.put(
     '/{user_id}',
-    status_code=HTTPStatus.OK,
     response_model=UserPublicSchema,
 )
 def update_user(
@@ -125,9 +123,7 @@ def update_user(
         )
 
 
-@router.delete(
-    '/{user_id}', status_code=HTTPStatus.OK, response_model=MessageSchema
-)
+@router.delete('/{user_id}', response_model=MessageSchema)
 def delete_user(
     user_id: int,
     session: T_Session,

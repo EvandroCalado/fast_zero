@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fast_zero.schemas import UserPublicSchema
+from tests.conftest import UserFactory
 
 
 def test_create_user_should_return_CREATED_and_user_with_id(client):
@@ -18,6 +18,8 @@ def test_create_user_should_return_CREATED_and_user_with_id(client):
         'id': 1,
         'username': 'johndoe',
         'email': 'johndoe@me.com',
+        'created_at': response.json()['created_at'],
+        'updated_at': response.json()['updated_at'],
     }
 
 
@@ -56,13 +58,15 @@ def test_read_users_should_return_OK_and_empty_list(client):
     assert response.json() == {'users': []}
 
 
-def test_read_users_should_return_OK_and_users_list(client, user):
-    user_schema = UserPublicSchema.model_validate(user).model_dump()
+def test_read_users_should_return_OK_and_users_list(client, session):
+    expected_users = 5
+    session.bulk_save_objects(UserFactory.create_batch(5))
+    session.commit()
 
     response = client.get('/users')
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'users': [user_schema]}
+    assert len(response.json()['users']) == expected_users
 
 
 def test_read_user_should_return_OK_and_user(client, user):
@@ -73,6 +77,8 @@ def test_read_user_should_return_OK_and_user(client, user):
         'id': 1,
         'username': user.username,
         'email': user.email,
+        'created_at': response.json()['created_at'],
+        'updated_at': response.json()['updated_at'],
     }
 
 
@@ -98,6 +104,8 @@ def test_update_user_should_return_OK_and_updated_user(client, user, token):
         'id': 1,
         'username': 'updated_johndoe',
         'email': 'johndoe@me.com',
+        'created_at': response.json()['created_at'],
+        'updated_at': response.json()['updated_at'],
     }
 
 

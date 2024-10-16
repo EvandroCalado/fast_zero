@@ -23,7 +23,7 @@ T_OAuth2Form = Annotated[OAuth2PasswordRequestForm, Depends()]
 T_Session = Annotated[Session, Depends(get_session)]
 
 
-@router.post('/token', status_code=HTTPStatus.OK, response_model=TokenSchema)
+@router.post('/token', response_model=TokenSchema)
 def login_from_access_token(
     form_data: T_OAuth2Form,
     session: T_Session,
